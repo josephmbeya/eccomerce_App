@@ -13,7 +13,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:test": "node test-db-connection.js",
-    "vercel-build": "prisma generate && next build"
+    "vercel-build": "npm install --legacy-peer-deps && prisma generate && next build"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
@@ -22,7 +22,7 @@
     "@stripe/stripe-js": "^7.5.0",
     "bcryptjs": "^3.0.2",
     "clsx": "^2.0.0",
-    "lucide-react": "^0.263.1",
+    "lucide-react": "^0.525.0",
     "next": "^15.0.0",
     "next-auth": "^5.0.0-beta.29",
     "prisma": "^6.12.0",
