@@ -4,6 +4,11 @@ import { useState } from 'react'
 import { X, Star, Heart, ShoppingCart, Minus, Plus, Truck, Shield, RefreshCw } from 'lucide-react'
 import { Product } from '@/lib/types'
 import { formatPrice, calculateDiscount, cn } from '@/lib/utils'
+import { useCartStore } from '@/store/cart'
+import { customToast } from '@/lib/toast'
+import { useLoadingStates } from '@/lib/hooks/useLoadingStates'
+import { useErrorHandler } from '@/lib/hooks/useErrorHandler'
+import { ButtonLoader } from '@/components/Loader'
 
 interface ProductModalProps {
   product: Product | null
@@ -17,6 +22,10 @@ export default function ProductModal({ product, isOpen, onClose }: ProductModalP
   const [selectedColor, setSelectedColor] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [isWishlisted, setIsWishlisted] = useState(false)
+  
+  // Always call hooks at the top level
+  const { isLoading, withLoading } = useLoadingStates()
+  const { handleError } = useErrorHandler()
 
   if (!product || !isOpen) return null
 
@@ -27,10 +36,28 @@ export default function ProductModal({ product, isOpen, onClose }: ProductModalP
     setQuantity(Math.max(1, quantity + delta))
   }
 
-  const handleAddToCart = () => {
-    // Add to cart logic here
-    console.log('Added to cart:', { product, quantity, selectedSize, selectedColor })
+const handleAddToCart = async () => {
+  const { addItem } = useCartStore.getState()
+
+  if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+    customToast.warning('Please select a size')
+    return
   }
+
+  if (product.colors && product.colors.length > 0 && !selectedColor) {
+    customToast.warning('Please select a color')
+    return
+  }
+
+  await withLoading(`add-to-cart-${product.id}`, async () => {
+    try {
+      addItem(product, quantity, selectedSize, selectedColor)
+      customToast.success(`Added ${quantity} ${product.name} to cart!`)
+    } catch (error) {
+      handleError(error, 'Failed to add item to cart')
+    }
+  })
+}
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -242,12 +269,22 @@ export default function ProductModal({ product, isOpen, onClose }: ProductModalP
               {/* Action Buttons */}
               <div className="mt-8 space-y-4">
                 <div className="flex space-x-4">
-                  <button
+<button
                     onClick={handleAddToCart}
-                    className="flex-1 btn-primary"
+                    disabled={isLoading(`add-to-cart-${product.id}`)}
+                    className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Add to Cart
+                    {isLoading(`add-to-cart-${product.id}`) ? (
+                      <>
+                        <ButtonLoader size="sm" color="white" />
+                        Adding to Cart...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        Add to Cart
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={() => setIsWishlisted(!isWishlisted)}

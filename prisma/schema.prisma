@@ -1,0 +1,147 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Optional: for migrations when using connection pooling
+}
+
+model User {
+  id             String    @id @default(uuid())
+  name           String?
+  email          String    @unique
+  emailVerified  DateTime?
+  image          String?
+  hashedPassword String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  accounts       Account[]
+  sessions       Session[]
+  orders         Order[]
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Order {
+  id                   String   @id @default(uuid())
+  userId               String
+  status               String   @default("pending")
+  
+  // Order items as JSON string
+  items                String   // JSON stringified cart items
+  
+  // Shipping address
+  shippingName         String
+  shippingStreet       String
+  shippingCity         String
+  shippingState        String?
+  shippingZipCode      String?
+  shippingCountry      String
+  
+  // Billing address
+  billingName          String
+  billingStreet        String
+  billingCity          String
+  billingState         String?
+  billingZipCode       String?
+  billingCountry       String
+  
+  // Shipping method
+  shippingMethodId     String
+  shippingMethodName   String
+  shippingCost         Float
+  
+  // Payment method
+  paymentMethodId      String
+  paymentMethodName    String
+  paymentFee           Float    @default(0)
+  
+  // Pricing
+  subtotal             Float
+  total                Float
+  
+  // Optional notes
+  notes                String?
+  
+  // Timestamps
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  // Relations
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments             Payment[]
+}
+
+model Payment {
+  id                   String   @id @default(uuid())
+  orderId              String
+  stripePaymentIntentId String?
+  
+  // Payment details
+  amount               Float
+  currency             String   @default("MWK")
+  paymentMethod        String   // 'stripe_card', 'airtel_money', etc.
+  status               String   @default("pending") // 'pending', 'processing', 'succeeded', 'failed', 'cancelled'
+  processingFee        Float    @default(0)
+  
+  // Mobile money specific fields
+  mobileMoneyPhone     String?
+  mobileMoneyReference String?
+  
+  // Bank transfer specific fields
+  bankTransferReference String?
+  bankTransferBank      String?
+  
+  // Metadata as JSON
+  metadata             String?  // JSON stringified additional data
+  
+  // Failure information
+  failureCode          String?
+  failureMessage       String?
+  
+  // Timestamps
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  // Relations
+  order                Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}

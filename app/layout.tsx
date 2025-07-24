@@ -2,6 +2,9 @@ import type { Metadata } from 'next'
 import { Inter, Playfair_Display } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import SessionProvider from '@/components/SessionProvider'
+import ErrorBoundary from '@/components/ErrorBoundary'
+import { Toaster } from 'react-hot-toast'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' })
@@ -72,12 +75,27 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#3b82f6" />
       </head>
       <body className={`${inter.variable} ${playfair.variable} font-sans antialiased`}>
-        <ThemeProvider
-          defaultTheme="system"
-          storageKey="tishope-theme"
-        >
-          {children}
-        </ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider
+            defaultTheme="system"
+            storageKey="tishope-theme"
+          >
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
+            <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: 'var(--toast-bg)',
+                color: 'var(--toast-color)',
+                border: '1px solid var(--toast-border)',
+              },
+            }}
+          />
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   )

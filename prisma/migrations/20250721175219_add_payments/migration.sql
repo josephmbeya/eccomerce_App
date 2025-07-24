@@ -1,0 +1,53 @@
+-- CreateTable
+CREATE TABLE "Order" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "items" TEXT NOT NULL,
+    "shippingName" TEXT NOT NULL,
+    "shippingStreet" TEXT NOT NULL,
+    "shippingCity" TEXT NOT NULL,
+    "shippingState" TEXT,
+    "shippingZipCode" TEXT,
+    "shippingCountry" TEXT NOT NULL,
+    "billingName" TEXT NOT NULL,
+    "billingStreet" TEXT NOT NULL,
+    "billingCity" TEXT NOT NULL,
+    "billingState" TEXT,
+    "billingZipCode" TEXT,
+    "billingCountry" TEXT NOT NULL,
+    "shippingMethodId" TEXT NOT NULL,
+    "shippingMethodName" TEXT NOT NULL,
+    "shippingCost" REAL NOT NULL,
+    "paymentMethodId" TEXT NOT NULL,
+    "paymentMethodName" TEXT NOT NULL,
+    "paymentFee" REAL NOT NULL DEFAULT 0,
+    "subtotal" REAL NOT NULL,
+    "total" REAL NOT NULL,
+    "notes" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "Payment" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "orderId" TEXT NOT NULL,
+    "stripePaymentIntentId" TEXT,
+    "amount" REAL NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'MWK',
+    "paymentMethod" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "processingFee" REAL NOT NULL DEFAULT 0,
+    "mobileMoneyPhone" TEXT,
+    "mobileMoneyReference" TEXT,
+    "bankTransferReference" TEXT,
+    "bankTransferBank" TEXT,
+    "metadata" TEXT,
+    "failureCode" TEXT,
+    "failureMessage" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Payment_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);

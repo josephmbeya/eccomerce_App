@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Search, 
   ShoppingCart, 
@@ -21,19 +21,104 @@ import {
   Facebook,
   Twitter,
   Instagram,
-  Youtube
+  Youtube,
+  LogOut,
+  Settings,
+  Package,
+  BarChart3,
+  Crown,
+  Filter,
+  Grid,
+  List,
+  ChevronDown
 } from 'lucide-react'
+import { useSession, signOut } from 'next-auth/react'
 import { useTheme } from '@/components/ThemeProvider'
 import ProductModal from '@/components/ProductModal'
+import AuthModal from '@/components/AuthModal'
+import CartSidebar from '@/components/CartSidebar'
+import FilterSidebar from '@/components/FilterSidebar'
+import SortControls from '@/components/SortControls'
+import Pagination from '@/components/Pagination'
+import ProductCardSkeleton from '@/components/ProductCardSkeleton'
 import { products } from '@/lib/products'
 import { Product } from '@/lib/types'
 import { formatPrice, calculateDiscount, cn } from '@/lib/utils'
+import { useCartStore } from '@/store/cart'
+import { useSearchStore } from '@/store/search'
+import { useAuthStore } from '@/store/auth'
+import { customToast } from '@/lib/toast'
+import { useRouter } from 'next/navigation'
+import { isAdmin } from '@/lib/admin'
 
 export default function HomePage() {
+  const { data: session } = useSession()
+  const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const { addItem, toggleCart, getTotalItems } = useCartStore()
+  const { 
+    searchQuery, 
+    setSearchQuery, 
+    filteredProducts, 
+    filterProducts, 
+    isFiltering,
+    currentPage,
+    totalResults,
+    resultsPerPage,
+    getPaginatedResults,
+    viewMode,
+    clearFilters,
+    clearSearchHistory
+  } = useSearchStore()
+  const { isAuthModalOpen, authModalMode, openAuthModal, closeAuthModal, setUser } = useAuthStore()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false)
+  
+  const totalItems = getTotalItems()
+  
+  // Calculate pagination values
+  const totalPages = Math.ceil(totalResults / resultsPerPage)
+  const paginatedProducts = getPaginatedResults()
+  
+  // Hydration fix - only show cart count after component mounts
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+  
+  // Update auth store when session changes
+  useEffect(() => {
+    if (session?.user) {
+      setUser({
+        id: session.user.id!,
+        name: session.user.name || null,
+        email: session.user.email!,
+        image: session.user.image || null
+      })
+    } else {
+      setUser(null)
+    }
+  }, [session, setUser])
+  
+  // Initialize filtered products with all products on component mount
+  useEffect(() => {
+    filterProducts(products)
+  }, [])
+  
+  // Filter products whenever searchQuery changes
+  useEffect(() => {
+    filterProducts(products)
+  }, [searchQuery, filterProducts])
+  
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+  }
+  
+  // Use filtered products if search is active, otherwise show all products
+  const displayProducts = searchQuery.trim() ? filteredProducts : products
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
@@ -47,6 +132,35 @@ export default function HomePage() {
   const closeProductModal = () => {
     setIsProductModalOpen(false)
     setSelectedProduct(null)
+  }
+  
+  const handleAddToCart = (product: Product, quantity: number = 1) => {
+    addItem(product, quantity)
+    customToast.success(`Added ${product.name} to cart!`)
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut({ callbackUrl: '/' })
+      customToast.success('Signed out successfully')
+    } catch (error) {
+      customToast.error('Error signing out')
+    }
+    setShowUserDropdown(false)
+  }
+
+  const handleUserClick = () => {
+    if (session?.user) {
+      setShowUserDropdown(!showUserDropdown)
+    } else {
+      openAuthModal('login')
+    }
+  }
+
+
+  const handleAdminDashboard = () => {
+    router.push('/admin')
+    setShowUserDropdown(false)
   }
 
   const renderStars = (rating: number) => {
@@ -83,7 +197,9 @@ export default function HomePage() {
                 <input
                   type="text"
                   placeholder="Search products..."
-                  className="w-full rounded-lg border border-gray-300 bg-white/50 py-2 pl-10 pr-4 text-sm backdrop-blur-sm placeholder:text-gray-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800/50 dark:text-white dark:placeholder:text-gray-400"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="w-full rounded-lg border border-gray-300 bg-white/50 py-2 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-500 backdrop-blur-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-600 dark:bg-gray-800/50 dark:text-white dark:placeholder:text-gray-400 dark:focus:border-primary-400"
                 />
               </div>
             </div>
@@ -93,15 +209,86 @@ export default function HomePage() {
               <button className="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
                 <Heart className="h-5 w-5" />
               </button>
-              <button className="relative rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
+              <button 
+                onClick={toggleCart}
+                className="relative rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+              >
                 <ShoppingCart className="h-5 w-5" />
-                <span className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-primary-500 text-xs text-white flex items-center justify-center">
-                  3
-                </span>
+                {hasMounted && totalItems > 0 && (
+                  <span className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-primary-500 text-xs text-white flex items-center justify-center">
+                    {totalItems}
+                  </span>
+                )}
               </button>
-              <button className="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
-                <User className="h-5 w-5" />
-              </button>
+              {/* User Account */}
+              <div className="relative">
+                <button 
+                  onClick={handleUserClick}
+                  className="flex items-center space-x-2 rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                >
+                  {session?.user?.image ? (
+                    <img 
+                      src={session.user.image} 
+                      alt={session.user.name || 'User'}
+                      className="h-6 w-6 rounded-full"
+                    />
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
+                  {session?.user && (
+                    <span className="hidden lg:inline text-sm font-medium">
+                      {session.user.name || 'Account'}
+                    </span>
+                  )}
+                </button>
+                
+                {/* User Dropdown */}
+                {showUserDropdown && session?.user && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setShowUserDropdown(false)}
+                    />
+                    <div className="absolute right-0 top-full z-20 mt-2 w-48 rounded-lg border border-gray-200 bg-white py-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {session.user.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {session.user.email}
+                        </p>
+                      </div>
+                      <button className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">
+                        <Package className="mr-3 h-4 w-4" />
+                        My Orders
+                      </button>
+                      <button className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700">
+                        <Settings className="mr-3 h-4 w-4" />
+                        Settings
+                      </button>
+                      {isAdmin(session.user.email) && (
+                        <>
+                          <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                          <button 
+                            onClick={handleAdminDashboard}
+                            className="flex w-full items-center px-4 py-2 text-left text-sm text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/20 font-medium"
+                          >
+                            <BarChart3 className="mr-3 h-4 w-4" />
+                            Admin Dashboard
+                          </button>
+                        </>
+                      )}
+                      <button 
+                        onClick={handleSignOut}
+                        className="flex w-full items-center px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                      >
+                        <LogOut className="mr-3 h-4 w-4" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
               <button
                 onClick={toggleTheme}
                 className="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
@@ -130,13 +317,15 @@ export default function HomePage() {
           {/* Mobile Menu */}
           {isMobileMenuOpen && (
             <div className="border-t border-gray-200/50 py-4 md:hidden dark:border-gray-700/50">
-              <div className="space-y-4">
+            <div className="space-y-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search products..."
-                    className="w-full rounded-lg border border-gray-300 bg-white/50 py-2 pl-10 pr-4 text-sm backdrop-blur-sm placeholder:text-gray-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800/50 dark:text-white dark:placeholder:text-gray-400"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="w-full rounded-lg border border-gray-300 bg-white/50 py-2 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-500 backdrop-blur-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-600 dark:bg-gray-800/50 dark:text-white dark:placeholder:text-gray-400 dark:focus:border-primary-400"
                   />
                 </div>
                 <div className="flex items-center justify-around">
@@ -144,18 +333,36 @@ export default function HomePage() {
                     <Heart className="h-5 w-5" />
                     <span className="text-xs">Wishlist</span>
                   </button>
-                  <button className="flex flex-col items-center space-y-1 text-gray-600 dark:text-gray-300">
+                  <button 
+                    onClick={toggleCart}
+                    className="flex flex-col items-center space-y-1 text-gray-600 dark:text-gray-300"
+                  >
                     <div className="relative">
                       <ShoppingCart className="h-5 w-5" />
-                      <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-primary-500 text-xs text-white flex items-center justify-center">
-                        3
-                      </span>
+                      {hasMounted && totalItems > 0 && (
+                        <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-primary-500 text-xs text-white flex items-center justify-center">
+                          {totalItems}
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs">Cart</span>
                   </button>
-                  <button className="flex flex-col items-center space-y-1 text-gray-600 dark:text-gray-300">
-                    <User className="h-5 w-5" />
-                    <span className="text-xs">Account</span>
+                  <button 
+                    onClick={handleUserClick}
+                    className="flex flex-col items-center space-y-1 text-gray-600 dark:text-gray-300"
+                  >
+                    {session?.user?.image ? (
+                      <img 
+                        src={session.user.image} 
+                        alt={session.user.name || 'User'}
+                        className="h-5 w-5 rounded-full"
+                      />
+                    ) : (
+                      <User className="h-5 w-5" />
+                    )}
+                    <span className="text-xs">
+                      {session?.user ? 'Account' : 'Sign In'}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -246,8 +453,59 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => {
+          {/* Filter Toggle Button (Mobile) */}
+          <div className="flex items-center justify-between mb-6 lg:hidden">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center space-x-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              <Filter className="h-4 w-4" />
+              <span>Filters</span>
+            </button>
+          </div>
+
+          <div className="flex gap-6">
+            {/* Filter Sidebar */}
+            <FilterSidebar 
+              isOpen={showFilters} 
+              onClose={() => setShowFilters(false)} 
+            />
+
+            {/* Main Content */}
+            <div className="flex-1">
+              {/* Sort Controls */}
+              <SortControls 
+                onFilterToggle={() => setShowFilters(!showFilters)}
+                showFilters={showFilters}
+              />
+
+              {/* Products Grid */}
+              <div className="mt-6">
+                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Show skeleton loaders when filtering */}
+            {isFiltering ? (
+              Array.from({ length: 6 }, (_, i) => (
+                <ProductCardSkeleton key={`skeleton-${i}`} />
+              ))
+            ) : displayProducts.length === 0 ? (
+              /* No results state */
+              <div className="col-span-full flex flex-col items-center justify-center py-12">
+                <div className="text-center">
+                  <Search className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    No products found
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    {searchQuery ? 
+                      `No products match "${searchQuery}". Try adjusting your search.` : 
+                      'No products available at the moment.'
+                    }
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* Display products */
+              displayProducts.map((product) => {
               const discount = product.originalPrice ? calculateDiscount(product.originalPrice, product.price) : 0
               
               return (
@@ -277,6 +535,11 @@ export default function HomePage() {
                       src={product.image}
                       alt={product.name}
                       className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.src = '/images/product-placeholder.jpg' // fallback image
+                      }}
                     />
                   </div>
                   
@@ -316,7 +579,7 @@ export default function HomePage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          // Add to cart logic
+                          handleAddToCart(product)
                         }}
                         className="rounded-lg bg-primary-600 p-2 text-white transition-colors hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600"
                       >
@@ -325,8 +588,15 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-              )
-            })}
+                )
+              })
+            )}
+                </div>
+              </div>
+
+              {/* Pagination */}
+              <Pagination className="mt-8" />
+            </div>
           </div>
 
           <div className="mt-12 text-center">
@@ -435,6 +705,16 @@ export default function HomePage() {
         isOpen={isProductModalOpen}
         onClose={closeProductModal}
       />
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={closeAuthModal}
+        defaultMode={authModalMode}
+      />
+      
+      {/* Cart Sidebar */}
+      <CartSidebar />
     </div>
   )
 }

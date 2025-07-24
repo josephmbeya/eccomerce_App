@@ -7,25 +7,42 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:test": "node test-db-connection.js",
+    "vercel-build": "prisma generate && next build"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.10.0",
+    "@prisma/client": "^6.12.0",
+    "@stripe/react-stripe-js": "^3.7.0",
+    "@stripe/stripe-js": "^7.5.0",
+    "bcryptjs": "^3.0.2",
+    "clsx": "^2.0.0",
+    "lucide-react": "^0.263.1",
     "next": "^15.0.0",
+    "next-auth": "^5.0.0-beta.29",
+    "prisma": "^6.12.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "lucide-react": "^0.263.1",
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0"
+    "react-hot-toast": "^2.5.2",
+    "stripe": "^18.3.0",
+    "tailwind-merge": "^2.0.0",
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "autoprefixer": "^10.0.1",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^15.0.0",
     "postcss": "^8.0.0",
     "tailwindcss": "^3.3.0",
-    "eslint": "^8.0.0",
-    "eslint-config-next": "^15.0.0"
+    "typescript": "^5.0.0"
   }
 }
