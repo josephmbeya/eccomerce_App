@@ -1,23 +1,11 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "npm run vercel-build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install --legacy-peer-deps",
-  "outputDirectory": ".next",
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 30
     }
   },
-  "regions": ["iad1"],
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
-  },
+  "buildCommand": "prisma generate && next build",
+  "installCommand": "npm ci",
   "headers": [
     {
       "source": "/api/(.*)",

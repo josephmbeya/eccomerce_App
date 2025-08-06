@@ -18,9 +18,6 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react'],
   },
   
-  // Optimize build output
-  output: 'standalone',
-  
   // Enable compression
   compress: true,
   
