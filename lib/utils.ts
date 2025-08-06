@@ -1,8 +1,17 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { NextRequest } from 'next/server'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+export function getIp(req: NextRequest): string {
+  return (
+    req.headers.get('x-forwarded-for') ||
+    req.headers.get('remote-addr') ||
+    ''
+  ).split(',')[0].trim()
 }
 
 export function formatCurrency(amount: number): string {

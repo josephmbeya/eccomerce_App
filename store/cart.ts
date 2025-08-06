@@ -81,6 +81,7 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'tishope-cart-storage',
+      skipHydration: true,
       storage: {
         getItem: (name) => {
           if (typeof window === 'undefined') return null

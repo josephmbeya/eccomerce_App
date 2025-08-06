@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+*.log
+.env.local
+.env*.local
+.DS_Store
+*.tgz
+*.tar.gz
+prisma/dev.db
+.vscode
+README.md
+test-db-connection.js

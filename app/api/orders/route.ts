@@ -13,6 +13,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Ensure user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found in database' }, 
+        { status: 404 }
+      )
+    }
+
     const body = await request.json()
     const {
       items,
@@ -111,8 +123,20 @@ export async function POST(request: NextRequest) {
       createdAt: order.createdAt
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Order creation error:', error)
+    
+    // Handle specific Prisma errors
+    if (error.code === 'P2003') {
+      return NextResponse.json(
+        { 
+          error: 'User not found. Please sign in again.', 
+          code: 'USER_NOT_FOUND' 
+        }, 
+        { status: 404 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Failed to create order' }, 
       { status: 500 }

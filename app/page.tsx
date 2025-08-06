@@ -87,6 +87,8 @@ export default function HomePage() {
   // Hydration fix - only show cart count after component mounts
   useEffect(() => {
     setHasMounted(true)
+    // Manually hydrate the cart store
+    useCartStore.persist.rehydrate()
   }, [])
   
   // Update auth store when session changes
