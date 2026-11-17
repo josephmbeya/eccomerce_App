@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { products } from '@/lib/products'
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,40 +46,67 @@ export async function POST(request: NextRequest) {
       // Shipping method
       shippingMethodId,
       shippingMethodName,
-      shippingCost,
       // Payment method
       paymentMethodId,
       paymentMethodName,
       paymentFee,
-      // Pricing
-      subtotal,
-      total,
       notes
     } = body
 
     // Validation
-    if (!items || !items.length) {
+    if (!Array.isArray(items) || items.length === 0 || items.length > 50) {
       return NextResponse.json(
         { error: 'No items in order' }, 
         { status: 400 }
       )
     }
 
-    if (!shippingName || !shippingStreet || !shippingCity || !shippingMethodId || !paymentMethodId) {
+    if (!shippingName || !shippingStreet || !shippingCity || !shippingCountry || !billingName || !billingStreet || !billingCity || !billingCountry || !shippingMethodId) {
       return NextResponse.json(
         { error: 'Missing required order information' }, 
         { status: 400 }
       )
     }
 
-    // Create order in database
+    const shippingMethods: Record<string, { name: string; price: number }> = {
+      standard: { name: 'Standard Delivery', price: 5000 },
+      express: { name: 'Express Delivery', price: 12000 },
+      free: { name: 'Free Delivery', price: 0 },
+    }
+    const shippingMethod = shippingMethods[shippingMethodId]
+    if (!shippingMethod) {
+      return NextResponse.json({ error: 'Invalid shipping method' }, { status: 400 })
+    }
+
+    const normalizedItems = items.map((item: any) => {
+      const product = products.find(candidate => candidate.id === item?.productId)
+      const quantity = Number(item?.quantity)
+      if (!product || !Number.isInteger(quantity) || quantity < 1 || quantity > 20 || !product.inStock || (product.stockCount !== undefined && quantity > product.stockCount)) return null
+      return {
+        productId: product.id,
+        productName: product.name,
+        productImage: product.image,
+        price: product.price,
+        quantity,
+        ...(typeof item.size === 'string' ? { size: item.size } : {}),
+        ...(typeof item.color === 'string' ? { color: item.color } : {}),
+      }
+    })
+    if (normalizedItems.some((item: unknown) => item === null)) {
+      return NextResponse.json({ error: 'Invalid product or quantity in order' }, { status: 400 })
+    }
+    const subtotal = normalizedItems.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0)
+    const shippingCost = shippingMethodId === 'free' && subtotal >= 50000 ? 0 : shippingMethod.price
+    const total = subtotal + shippingCost
+
+    // Create order using server-side catalog prices and shipping rates.
     const order = await prisma.order.create({
       data: {
         userId: session.user.id,
         status: 'pending',
         
         // Order items as JSON
-        items: JSON.stringify(items),
+        items: JSON.stringify(normalizedItems),
         
         // Shipping details
         shippingName,
@@ -98,13 +126,13 @@ export async function POST(request: NextRequest) {
         
         // Shipping method
         shippingMethodId,
-        shippingMethodName,
+        shippingMethodName: shippingMethod.name,
         shippingCost,
         
         // Payment method
-        paymentMethodId,
-        paymentMethodName,
-        paymentFee: paymentFee || 0,
+        paymentMethodId: 'pending',
+        paymentMethodName: 'Pending Selection',
+        paymentFee: 0,
         
         // Pricing
         subtotal,

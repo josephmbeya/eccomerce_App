@@ -119,10 +119,10 @@ export default function CheckoutPage() {
       country: 'Malawi'
     }
 
-    setShippingAddress(address)
+    let billing: Address
     
     if (useSameAddress) {
-      setBillingAddress(address)
+      billing = address
     } else if (!billingForm.name || !billingForm.street || !billingForm.city) {
       toast.error('Please fill in billing address details')
       return
@@ -135,15 +135,17 @@ export default function CheckoutPage() {
         zipCode: billingForm.zipCode || '',
         country: 'Malawi'
       }
-      setBillingAddress(billingAddr)
+      billing = billingAddr
     }
 
     // Create order first, then proceed to payment
-    createOrder()
+    setShippingAddress(address)
+    setBillingAddress(billing)
+    createOrder(address, billing)
   }
 
-  const createOrder = async () => {
-    if (!session?.user || !shippingAddress) return
+  const createOrder = async (shipping: Address, billing: Address) => {
+    if (!session?.user) return
 
     setIsProcessing(true)
 
@@ -158,18 +160,18 @@ export default function CheckoutPage() {
           size: item.size,
           color: item.color
         })),
-        shippingName: shippingAddress.name,
-        shippingStreet: shippingAddress.street,
-        shippingCity: shippingAddress.city,
-        shippingState: shippingAddress.state || '',
-        shippingZipCode: shippingAddress.zipCode || '',
-        shippingCountry: shippingAddress.country,
-        billingName: (billingAddress || shippingAddress).name,
-        billingStreet: (billingAddress || shippingAddress).street,
-        billingCity: (billingAddress || shippingAddress).city,
-        billingState: (billingAddress || shippingAddress).state || '',
-        billingZipCode: (billingAddress || shippingAddress).zipCode || '',
-        billingCountry: (billingAddress || shippingAddress).country,
+        shippingName: shipping.name,
+        shippingStreet: shipping.street,
+        shippingCity: shipping.city,
+        shippingState: shipping.state || '',
+        shippingZipCode: shipping.zipCode || '',
+        shippingCountry: shipping.country,
+        billingName: billing.name,
+        billingStreet: billing.street,
+        billingCity: billing.city,
+        billingState: billing.state || '',
+        billingZipCode: billing.zipCode || '',
+        billingCountry: billing.country,
         shippingMethodId: selectedShippingMethod.id,
         shippingMethodName: selectedShippingMethod.name,
         shippingCost: shippingCost,

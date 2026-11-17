@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the order belongs to the current user
-    if (order.userId !== session.user.email) {
+    if (order.userId !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

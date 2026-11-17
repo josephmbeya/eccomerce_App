@@ -15,8 +15,13 @@ export async function POST(request: Request) {
     }
 
     // Check if user already exists
+    const normalizedEmail = String(email).trim().toLowerCase()
+    if (typeof name !== 'string' || typeof password !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || password.length < 8) {
+      return NextResponse.json({ error: 'Enter a valid email and a password with at least 8 characters' }, { status: 400 })
+    }
+
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email: normalizedEmail }
     })
 
     if (existingUser) {
@@ -32,8 +37,8 @@ export async function POST(request: Request) {
     // Create user
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: name.trim(),
+        email: normalizedEmail,
         hashedPassword,
       }
     })

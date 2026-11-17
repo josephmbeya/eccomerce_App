@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 
-const ADMIN_EMAILS = ['admin@tishope.com', 'your-email@example.com']
+import { isAdmin } from '@/lib/admin'
 
 export async function PUT(
   request: NextRequest,
@@ -10,7 +10,7 @@ export async function PUT(
   try {
     const session = await auth()
     
-    if (!session || !ADMIN_EMAILS.includes(session.user?.email || '')) {
+    if (!session || !isAdmin(session.user?.email)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -42,7 +42,7 @@ export async function DELETE(
   try {
     const session = await auth()
     
-    if (!session || !ADMIN_EMAILS.includes(session.user?.email || '')) {
+    if (!session || !isAdmin(session.user?.email)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

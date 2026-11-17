@@ -20,7 +20,7 @@ import ProductManagement from '@/components/admin/ProductManagement'
 import OrderManagement from '@/components/admin/OrderManagement'
 import UserManagement from '@/components/admin/UserManagement'
 import AdminSettings from '@/components/admin/AdminSettings'
-import { ADMIN_EMAILS } from '@/lib/admin'
+import { isAdmin } from '@/lib/admin'
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession()
@@ -37,7 +37,7 @@ export default function AdminDashboard() {
     }
 
     // Check if user is admin
-    if (!ADMIN_EMAILS.includes(session.user?.email || '')) {
+    if (!isAdmin(session.user?.email)) {
       router.push('/')
       return
     }
@@ -53,7 +53,7 @@ export default function AdminDashboard() {
     )
   }
 
-  if (!session || !ADMIN_EMAILS.includes(session.user?.email || '')) {
+  if (!session || !isAdmin(session.user?.email)) {
     return null
   }
 
